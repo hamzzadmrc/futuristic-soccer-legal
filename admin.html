@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>FS Yönetim Paneli</title>
+<style>
+  :root { --bg:#0d1319; --card:#151d24; --line:#24313c; --text:#e8eef3; --muted:#8a9aa8; --gold:#ffd700; --green:#2ecc71; --red:#ff6b6b; --blue:#54a0ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:880px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:16px; margin:0 0 12px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; }
+  button { font:inherit; border:0; border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:700; }
+  button.primary { background:var(--gold); color:#000; } button.ghost { background:#22303b; color:var(--text); }
+  button.danger { background:transparent; color:var(--red); padding:4px 8px; }
+  button:disabled { opacity:.5; cursor:default; }
+  input, textarea { font:inherit; width:100%; background:#0f171e; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:12px 0 6px; font-weight:700; letter-spacing:.5px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .chips button { background:#22303b; color:var(--text); padding:6px 10px; font-size:13px; }
+  .code { font-family:ui-monospace,Consolas,monospace; letter-spacing:2px; color:var(--gold); font-weight:800; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
+  tr.pick { cursor:pointer; } tr.pick:hover { background:#1b2630; }
+  .ok { color:var(--green); } .bad { color:var(--red); } .muted { color:var(--muted); }
+  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#22303b; padding:10px 16px; border-radius:10px; display:none; max-width:90vw; }
+  .table-wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🎁 Futuristic Soccer — Yönetim Paneli</h1>
+  <div class="sub">Oyunculara coin ve reklamsız gün hediye et. Oyuncu kodu oyunda <b>Ayarlar</b> ekranında yazar.</div>
+
+  <div class="card" id="authCard">
+    <div class="row" style="justify-content:space-between">
+      <div id="who" class="muted">Giriş yapılmadı</div>
+      <div class="row">
+        <button class="primary" id="signIn">Google ile giriş yap</button>
+        <button class="ghost" id="signOut" style="display:none">Çıkış</button>
+      </div>
+    </div>
+    <div id="notAdmin" class="bad" style="display:none;margin-top:10px">Bu hesap yönetici değil. hamzdmrc41@gmail.com ile giriş yap.</div>
+  </div>
+
+  <div id="adminArea" style="display:none">
+    <div class="card">
+      <h2>Hediye gönder</h2>
+      <label for="code">OYUNCU KODU</label>
+      <input id="code" maxlength="6" placeholder="Örn. K7M2QX" style="text-transform:uppercase;letter-spacing:3px;font-weight:800">
+      <label for="coins">COIN</label>
+      <input id="coins" type="number" min="0" max="1000000" value="0">
+      <div class="row chips" style="margin-top:8px">
+        <button data-coins="1000">+1.000</button><button data-coins="5000">+5.000</button>
+        <button data-coins="10000">+10.000</button><button data-coins="50000">+50.000</button>
+      </div>
+      <label for="days">REKLAMSIZ GÜN</label>
+      <input id="days" type="number" min="0" max="3650" value="0">
+      <div class="row chips" style="margin-top:8px">
+        <button data-days="7">7 gün</button><button data-days="30">30 gün</button>
+        <button data-days="365">1 yıl</button><button data-days="3650">10 yıl</button>
+      </div>
+      <label for="msg">MESAJ (isteğe bağlı, oyuncu görür)</label>
+      <input id="msg" maxlength="120" placeholder="Örn. Test ettiğin için teşekkürler!">
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="send">Hediyeyi gönder</button>
+        <span id="sendState" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Oyuncular</h2>
+        <button class="ghost" id="reload">Yenile</button>
+      </div>
+      <div class="muted" style="font-size:12px;margin:6px 0 10px">Bir satıra dokununca kodu forma yazar ve hediye geçmişini gösterir.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Kod</th><th>Cihaz</th><th>Sürüm</th><th>Son görülme</th></tr></thead>
+        <tbody id="players"><tr><td colspan="4" class="muted">Yükleniyor…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="card" id="historyCard" style="display:none">
+      <h2>Hediye geçmişi — <span class="code" id="histCode"></span></h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Tarih</th><th>Coin</th><th>Reklamsız</th><th>Mesaj</th><th>Durum</th><th></th></tr></thead>
+        <tbody id="gifts"></tbody>
+      </table></div>
+    </div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore, doc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const ADMIN = 'hamzdmrc41@gmail.com';
+const app = initializeApp({
+  apiKey: 'AIzaSyDCHlNdWGT6hClbdGGpvtqhpx9X4oFBn8w',
+  authDomain: 'futuristic-soccer---fs.firebaseapp.com',
+  projectId: 'futuristic-soccer---fs',
+  storageBucket: 'futuristic-soccer---fs.firebasestorage.app',
+  appId: '1:896684228469:web:8796c83580b1110a0b1d3c',
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = (id) => document.getElementById(id);
+
+function toast(text, bad) {
+  const t = $('toast');
+  t.textContent = text; t.style.color = bad ? 'var(--red)' : 'var(--text)'; t.style.display = 'block';
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => (t.style.display = 'none'), 3500);
+}
+const fmt = (ts) => ts && ts.toDate ? ts.toDate().toLocaleString('tr-TR') : '—';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+$('signIn').onclick = async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider().setCustomParameters({ login_hint: ADMIN })); }
+  catch (e) { toast('Giriş olmadı: ' + (e.code || e.message), true); }
+};
+$('signOut').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, (user) => {
+  const isAdmin = !!user && user.email === ADMIN && user.emailVerified;
+  $('who').textContent = user ? 'Giriş: ' + user.email : 'Giriş yapılmadı';
+  $('signIn').style.display = user ? 'none' : '';
+  $('signOut').style.display = user ? '' : 'none';
+  $('notAdmin').style.display = user && !isAdmin ? '' : 'none';
+  $('adminArea').style.display = isAdmin ? '' : 'none';
+  if (isAdmin) loadPlayers();
+});
+
+document.querySelectorAll('[data-coins]').forEach((b) => (b.onclick = () => {
+  $('coins').value = (parseInt($('coins').value) || 0) + parseInt(b.dataset.coins);
+}));
+document.querySelectorAll('[data-days]').forEach((b) => (b.onclick = () => ($('days').value = b.dataset.days)));
+$('code').oninput = () => ($('code').value = $('code').value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+
+async function uidForCode(code) {
+  const snap = await getDoc(doc(db, 'codes', code));
+  return snap.exists() ? snap.data().uid : null;
+}
+
+$('send').onclick = async () => {
+  const code = $('code').value.trim();
+  const coins = Math.max(0, Math.min(1000000, parseInt($('coins').value) || 0));
+  const days = Math.max(0, Math.min(3650, parseInt($('days').value) || 0));
+  const message = $('msg').value.trim().slice(0, 120);
+  if (code.length !== 6) return toast('Oyuncu kodu 6 karakter olmalı.', true);
+  if (!coins && !days) return toast('Coin ya da reklamsız gün gir.', true);
+  $('send').disabled = true; $('sendState').textContent = 'Gönderiliyor…';
+  try {
+    const uid = await uidForCode(code);
+    if (!uid) { toast('Bu kodla oyuncu bulunamadı.', true); return; }
+    await addDoc(collection(db, 'players', uid, 'gifts'), {
+      coins, adFreeDays: days, message, createdAt: serverTimestamp(), claimedAt: null,
+    });
+    toast(`Gönderildi: ${code} → ${coins.toLocaleString('tr-TR')} coin, ${days} gün reklamsız`);
+    $('coins').value = 0; $('days').value = 0; $('msg').value = '';
+    showHistory(code, uid);
+  } catch (e) {
+    toast('Gönderilemedi: ' + (e.code || e.message), true);
+  } finally {
+    $('send').disabled = false; $('sendState').textContent = '';
+  }
+};
+
+$('reload').onclick = () => loadPlayers();
+
+async function loadPlayers() {
+  const body = $('players');
+  try {
+    const snap = await getDocs(query(collection(db, 'players'), orderBy('lastSeen', 'desc'), limit(200)));
+    if (snap.empty) { body.innerHTML = '<tr><td colspan="4" class="muted">Henüz oyuncu yok. Oyunu yeni sürümle açan herkes burada görünür.</td></tr>'; return; }
+    body.innerHTML = '';
+    snap.forEach((d) => {
+      const p = d.data();
+      const tr = document.createElement('tr');
+      tr.className = 'pick';
+      tr.innerHTML = `<td class="code">${esc(p.code)}</td><td>${esc(p.platform)}</td><td>${esc(p.appVersion)}</td><td class="muted">${fmt(p.lastSeen)}</td>`;
+      tr.onclick = () => { $('code').value = p.code; showHistory(p.code, d.id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+      body.appendChild(tr);
+    });
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="4" class="bad">Liste alınamadı: ${esc(e.code || e.message)}</td></tr>`;
+  }
+}
+
+async function showHistory(code, uid) {
+  $('historyCard').style.display = '';
+  $('histCode').textContent = code;
+  const body = $('gifts');
+  body.innerHTML = '<tr><td colspan="6" class="muted">Yükleniyor…</td></tr>';
+  try {
+    const snap = await getDocs(query(collection(db, 'players', uid, 'gifts'), orderBy('createdAt', 'desc'), limit(50)));
+    if (snap.empty) { body.innerHTML = '<tr><td colspan="6" class="muted">Henüz hediye yok.</td></tr>'; return; }
+    body.innerHTML = '';
+    snap.forEach((d) => {
+      const g = d.data();
+      const tr = document.createElement('tr');
+      const claimed = !!g.claimedAt;
+      tr.innerHTML = `<td class="muted">${fmt(g.createdAt)}</td><td>${(g.coins || 0).toLocaleString('tr-TR')}</td><td>${g.adFreeDays || 0} gün</td>
+        <td>${esc(g.message)}</td><td class="${claimed ? 'ok' : 'muted'}">${claimed ? 'Alındı ✔ ' + fmt(g.claimedAt) : 'Bekliyor'}</td><td></td>`;
+      if (!claimed) {
+        const del = document.createElement('button');
+        del.className = 'danger'; del.textContent = 'İptal';
+        del.onclick = async () => {
+          if (!confirm('Bu hediye iptal edilsin mi?')) return;
+          try { await deleteDoc(d.ref); showHistory(code, uid); } catch (e) { toast('İptal edilemedi: ' + (e.code || e.message), true); }
+        };
+        tr.lastElementChild.appendChild(del);
+      }
+      body.appendChild(tr);
+    });
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="6" class="bad">Geçmiş alınamadı: ${esc(e.code || e.message)}</td></tr>`;
+  }
+}
+</script>
+</body>
+</html>
