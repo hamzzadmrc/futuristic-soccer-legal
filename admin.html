@@ -28,12 +28,25 @@
   .ok { color:var(--green); } .bad { color:var(--red); } .muted { color:var(--muted); }
   #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#22303b; padding:10px 16px; border-radius:10px; display:none; max-width:90vw; }
   .table-wrap { overflow-x:auto; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+  @media (max-width:560px) { .grid2 { grid-template-columns:1fr; } }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
+  .stat { background:#0f171e; border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .stat b { display:block; font-size:24px; color:var(--gold); } .stat span { font-size:12px; color:var(--muted); }
+  .bar { height:6px; background:#22303b; border-radius:4px; overflow:hidden; margin-top:4px; min-width:80px; }
+  .bar i { display:block; height:100%; background:var(--green); }
+  .pill { font-size:11px; font-weight:800; padding:2px 8px; border-radius:20px; background:#22303b; white-space:nowrap; }
+  .pill.ok { background:rgba(46,204,113,.15); } .pill.bad { background:rgba(255,107,107,.15); }
+  .actions button { background:#22303b; color:var(--text); padding:5px 9px; font-size:12px; margin:2px; }
+  nav.tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  nav.tabs button { background:#22303b; color:var(--text); } nav.tabs button.on { background:var(--gold); color:#000; }
+  select { font:inherit; width:100%; background:#0f171e; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
 </style>
 </head>
 <body>
 <main>
   <h1>🎁 Futuristic Soccer — Yönetim Paneli</h1>
-  <div class="sub">Oyunculara coin ve reklamsız gün hediye et. Oyuncu kodu oyunda <b>Ayarlar</b> ekranında yazar.</div>
+  <div class="sub">Promosyon kodları, tek oyuncuya hediye, herkese hediye ve istatistikler.</div>
 
   <div class="card" id="authCard">
     <div class="row" style="justify-content:space-between">
@@ -47,6 +60,79 @@
   </div>
 
   <div id="adminArea" style="display:none">
+    <nav class="tabs">
+      <button data-tab="promo" class="on">🎟️ Promosyon kodları</button>
+      <button data-tab="gift">🎁 Oyuncuya hediye</button>
+      <button data-tab="all">📣 Herkese hediye</button>
+      <button data-tab="stats">📊 İstatistik</button>
+    </nav>
+
+    <section data-pane="promo">
+    <div class="card">
+      <h2>Yeni promosyon kodu</h2>
+      <div class="muted" style="font-size:12px">Sosyal medyada paylaşacağın kodu oluştur. Oyuncular oyunda <b>Ana menü → PROMOSYON KODU 🎟️</b> (ya da Ayarlar) ekranına yazar. Her oyuncu bir kodu yalnızca bir kez kullanabilir.</div>
+      <label for="pCode">KOD (3–20 harf/rakam)</label>
+      <div class="row" style="flex-wrap:nowrap">
+        <input id="pCode" maxlength="20" placeholder="Örn. FSLANSMAN" style="text-transform:uppercase;letter-spacing:3px;font-weight:800">
+        <button class="ghost" id="pRandom" title="Rastgele kod">🎲</button>
+      </div>
+      <div class="grid2">
+        <div>
+          <label for="pCoins">KAÇ COIN KAZANACAK</label>
+          <input id="pCoins" type="number" min="0" max="1000000" value="500">
+          <div class="row chips" style="margin-top:8px">
+            <button data-pcoins="100">100</button><button data-pcoins="500">500</button><button data-pcoins="1000">1.000</button><button data-pcoins="5000">5.000</button>
+          </div>
+        </div>
+        <div>
+          <label for="pMax">KAÇ KİŞİ KULLANABİLİR</label>
+          <input id="pMax" type="number" min="1" max="10000000" value="100">
+          <div class="row chips" style="margin-top:8px">
+            <button data-pmax="50">50</button><button data-pmax="100">100</button><button data-pmax="500">500</button><button data-pmax="1000">1.000</button><button data-pmax="10000">10.000</button>
+          </div>
+        </div>
+        <div>
+          <label for="pDays">REKLAMSIZ GÜN (isteğe bağlı)</label>
+          <input id="pDays" type="number" min="0" max="3650" value="0">
+        </div>
+        <div>
+          <label for="pExp">SON KULLANMA (boş = süresiz)</label>
+          <input id="pExp" type="datetime-local">
+          <div class="row chips" style="margin-top:8px">
+            <button data-pexp="1">1 gün</button><button data-pexp="3">3 gün</button><button data-pexp="7">1 hafta</button><button data-pexp="30">1 ay</button><button data-pexp="0">Süresiz</button>
+          </div>
+        </div>
+      </div>
+      <label for="pMsg">MESAJ (isteğe bağlı, oyuncu görür)</label>
+      <input id="pMsg" maxlength="120" placeholder="Örn. Bizi takip ettiğin için teşekkürler!">
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="pCreate">Kodu oluştur</button>
+        <span id="pState" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Kodların</h2>
+        <button class="ghost" id="pReload">Yenile</button>
+      </div>
+      <div class="muted" style="font-size:12px;margin:6px 0 10px">Kodu durdurmak için <b>Durdur</b>, daha çok kişiye açmak için <b>Limit</b>, ödülü değiştirmek için <b>Coin</b>.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Kod</th><th>Ödül</th><th>Kullanım</th><th>Durum</th><th>Bitiş</th><th></th></tr></thead>
+        <tbody id="promos"><tr><td colspan="6" class="muted">Yükleniyor…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="card" id="redeemCard" style="display:none">
+      <h2>Kodu kullananlar — <span class="code" id="redeemCode"></span></h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Tarih</th><th>Oyuncu kodu</th><th>Cihaz</th></tr></thead>
+        <tbody id="redemptions"></tbody>
+      </table></div>
+    </div>
+    </section>
+
+    <section data-pane="gift" style="display:none">
     <div class="card">
       <h2>Hediye gönder</h2>
       <label for="code">OYUNCU KODU</label>
@@ -90,6 +176,42 @@
         <tbody id="gifts"></tbody>
       </table></div>
     </div>
+    </section>
+
+    <section data-pane="all" style="display:none">
+    <div class="card">
+      <h2>Herkese hediye gönder</h2>
+      <div class="muted" style="font-size:12px">Seçtiğin oyuncuların hepsine aynı hediye gider; oyunu açtıklarında “Hediye geldi!” görürler.</div>
+      <label for="aWho">KİMLERE</label>
+      <select id="aWho">
+        <option value="0">Tüm oyuncular</option>
+        <option value="7">Son 7 günde oynayanlar</option>
+        <option value="30">Son 30 günde oynayanlar</option>
+      </select>
+      <div class="grid2">
+        <div><label for="aCoins">COIN</label><input id="aCoins" type="number" min="0" max="1000000" value="0"></div>
+        <div><label for="aDays">REKLAMSIZ GÜN</label><input id="aDays" type="number" min="0" max="3650" value="0"></div>
+      </div>
+      <label for="aMsg">MESAJ (isteğe bağlı)</label>
+      <input id="aMsg" maxlength="120" placeholder="Örn. Bayramınız kutlu olsun!">
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="aSend">Herkese gönder</button>
+        <span id="aState" class="muted"></span>
+      </div>
+    </div>
+    </section>
+
+    <section data-pane="stats" style="display:none">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">İstatistik</h2>
+        <button class="ghost" id="sReload">Yenile</button>
+      </div>
+      <div class="stats" id="stats" style="margin-top:12px"></div>
+      <h2 style="margin-top:18px">Sürümler</h2>
+      <div id="versions" class="muted">—</div>
+    </div>
+    </section>
   </div>
 </main>
 <div id="toast"></div>
@@ -97,7 +219,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, doc, getDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy, limit, where, serverTimestamp, Timestamp, writeBatch, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const ADMIN = 'hamzdmrc41@gmail.com';
 const app = initializeApp({
@@ -132,7 +254,7 @@ onAuthStateChanged(auth, (user) => {
   $('signOut').style.display = user ? '' : 'none';
   $('notAdmin').style.display = user && !isAdmin ? '' : 'none';
   $('adminArea').style.display = isAdmin ? '' : 'none';
-  if (isAdmin) loadPlayers();
+  if (isAdmin) { loadPlayers(); loadPromos(); }
 });
 
 document.querySelectorAll('[data-coins]').forEach((b) => (b.onclick = () => {
@@ -219,6 +341,226 @@ async function showHistory(code, uid) {
     });
   } catch (e) {
     body.innerHTML = `<tr><td colspan="6" class="bad">Geçmiş alınamadı: ${esc(e.code || e.message)}</td></tr>`;
+  }
+}
+
+// ---------- tabs ----------
+document.querySelectorAll('nav.tabs button').forEach((b) => (b.onclick = () => {
+  document.querySelectorAll('nav.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('[data-pane]').forEach((p) => (p.style.display = p.dataset.pane === b.dataset.tab ? '' : 'none'));
+  if (b.dataset.tab === 'stats') loadStats();
+}));
+
+// ---------- promo codes ----------
+const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const cleanCode = (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
+$('pCode').oninput = () => ($('pCode').value = cleanCode($('pCode').value));
+$('pRandom').onclick = () => {
+  const r = crypto.getRandomValues(new Uint32Array(8));
+  $('pCode').value = 'FS' + Array.from(r, (n) => ALPHA[n % ALPHA.length]).join('');
+};
+document.querySelectorAll('[data-pcoins]').forEach((b) => (b.onclick = () => ($('pCoins').value = b.dataset.pcoins)));
+document.querySelectorAll('[data-pmax]').forEach((b) => (b.onclick = () => ($('pMax').value = b.dataset.pmax)));
+const toLocalInput = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+document.querySelectorAll('[data-pexp]').forEach((b) => (b.onclick = () => {
+  const days = parseInt(b.dataset.pexp);
+  $('pExp').value = days ? toLocalInput(new Date(Date.now() + days * 86400000)) : '';
+}));
+
+$('pCreate').onclick = async () => {
+  const code = cleanCode($('pCode').value);
+  const coins = Math.max(0, Math.min(1000000, parseInt($('pCoins').value) || 0));
+  const adFreeDays = Math.max(0, Math.min(3650, parseInt($('pDays').value) || 0));
+  const maxUses = Math.max(1, Math.min(10000000, parseInt($('pMax').value) || 0));
+  const message = $('pMsg').value.trim().slice(0, 120);
+  const expiresAt = $('pExp').value ? Timestamp.fromDate(new Date($('pExp').value)) : null;
+  if (code.length < 3) return toast('Kod en az 3 karakter olmalı.', true);
+  if (!coins && !adFreeDays) return toast('Coin ya da reklamsız gün gir.', true);
+  if (expiresAt && expiresAt.toMillis() <= Date.now()) return toast('Son kullanma tarihi gelecekte olmalı.', true);
+  $('pCreate').disabled = true; $('pState').textContent = 'Oluşturuluyor…';
+  try {
+    const ref = doc(db, 'promoCodes', code);
+    if ((await getDoc(ref)).exists()) { toast('Bu kod zaten var. Başka bir kod seç.', true); return; }
+    await setDoc(ref, { coins, adFreeDays, maxUses, uses: 0, active: true, expiresAt, message, createdAt: serverTimestamp() });
+    toast(`Hazır: ${code} → ${coins.toLocaleString('tr-TR')} coin, ${maxUses.toLocaleString('tr-TR')} kişi`);
+    $('pCode').value = ''; $('pMsg').value = '';
+    loadPromos();
+  } catch (e) {
+    toast('Oluşturulamadı: ' + (e.code || e.message), true);
+  } finally {
+    $('pCreate').disabled = false; $('pState').textContent = '';
+  }
+};
+$('pReload').onclick = () => loadPromos();
+
+function promoStatus(p) {
+  if (!p.active) return ['Durduruldu', 'bad'];
+  if (p.expiresAt && p.expiresAt.toMillis() <= Date.now()) return ['Süresi doldu', 'bad'];
+  if (p.uses >= p.maxUses) return ['Doldu', 'bad'];
+  return ['Aktif', 'ok'];
+}
+
+function rewardText(p) {
+  return [p.coins ? p.coins.toLocaleString('tr-TR') + ' coin' : '', p.adFreeDays ? p.adFreeDays + ' gün reklamsız' : '']
+    .filter(Boolean).join(' + ');
+}
+
+async function loadPromos() {
+  const body = $('promos');
+  try {
+    const snap = await getDocs(query(collection(db, 'promoCodes'), orderBy('createdAt', 'desc'), limit(100)));
+    if (snap.empty) { body.innerHTML = '<tr><td colspan="6" class="muted">Henüz kod yok. Yukarıdan ilk kodunu oluştur.</td></tr>'; return; }
+    body.innerHTML = '';
+    snap.forEach((d) => {
+      const p = d.data();
+      const [label, cls] = promoStatus(p);
+      const pct = Math.min(100, Math.round((p.uses / p.maxUses) * 100));
+      const reward = rewardText(p);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="code">${esc(d.id)}</td><td>${esc(reward)}</td>
+        <td>${p.uses.toLocaleString('tr-TR')} / ${p.maxUses.toLocaleString('tr-TR')}<div class="bar"><i style="width:${pct}%"></i></div></td>
+        <td><span class="pill ${cls}">${label}</span></td><td class="muted">${p.expiresAt ? fmt(p.expiresAt) : 'Süresiz'}</td><td class="actions"></td>`;
+      const act = tr.lastElementChild;
+      const btn = (text, fn) => { const b = document.createElement('button'); b.textContent = text; b.onclick = fn; act.appendChild(b); };
+      const change = async (fields) => {
+        try { await updateDoc(d.ref, fields); loadPromos(); } catch (e) { toast('Olmadı: ' + (e.code || e.message), true); }
+      };
+      btn('Kullananlar', () => showRedemptions(d.id));
+      btn(p.active ? 'Durdur' : 'Başlat', () => change({ active: !p.active }));
+      btn('Limit', () => {
+        const v = prompt(`${d.id} kaç kişi kullanabilsin? (şu an ${p.uses} kişi kullandı)`, String(p.maxUses));
+        if (v === null) return;
+        const n = parseInt(v);
+        if (!(n >= 1 && n <= 10000000)) return toast('1 ile 10.000.000 arası bir sayı gir.', true);
+        change({ maxUses: n });
+      });
+      btn('Coin', () => {
+        const v = prompt(`${d.id} kaç coin versin? (bundan sonra kullananlar için)`, String(p.coins));
+        if (v === null) return;
+        const n = parseInt(v);
+        if (!(n >= 0 && n <= 1000000)) return toast('0 ile 1.000.000 arası bir sayı gir.', true);
+        change({ coins: n });
+      });
+      btn('Süre', () => {
+        const v = prompt(`${d.id} kaç gün daha geçerli olsun? (0 = süresiz)`, '7');
+        if (v === null) return;
+        const n = parseInt(v);
+        if (!(n >= 0 && n <= 3650)) return toast('0 ile 3650 arası bir sayı gir.', true);
+        change({ expiresAt: n ? Timestamp.fromMillis(Date.now() + n * 86400000) : null });
+      });
+      btn('Paylaşım metni', async () => {
+        const text = `🎁 Futuristic Soccer : FS hediye kodu: ${d.id}\nOyunu aç → PROMOSYON KODU 🎟️ → kodu yaz → ${reward} senin!` +
+          `\nİlk ${p.maxUses.toLocaleString('tr-TR')} kişiye özel` +
+          (p.expiresAt ? `, son gün ${p.expiresAt.toDate().toLocaleDateString('tr-TR')}` : '') + '. ⚽';
+        try { await navigator.clipboard.writeText(text); toast('Paylaşım metni kopyalandı.'); } catch (_) { prompt('Kopyala:', text); }
+      });
+      btn('Sil', async () => {
+        if (!confirm(`${d.id} kodu ve kullanım kayıtları silinsin mi? Geri alınamaz.`)) return;
+        try {
+          const reds = await getDocs(collection(d.ref, 'redemptions'));
+          for (let i = 0; i < reds.docs.length; i += 450) {
+            const b = writeBatch(db);
+            reds.docs.slice(i, i + 450).forEach((r) => b.delete(r.ref));
+            await b.commit();
+          }
+          await deleteDoc(d.ref);
+          $('redeemCard').style.display = 'none';
+          loadPromos();
+        } catch (e) { toast('Silinemedi: ' + (e.code || e.message), true); }
+      });
+      body.appendChild(tr);
+    });
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="6" class="bad">Kodlar alınamadı: ${esc(e.code || e.message)}</td></tr>`;
+  }
+}
+
+async function showRedemptions(code) {
+  $('redeemCard').style.display = '';
+  $('redeemCode').textContent = code;
+  const body = $('redemptions');
+  body.innerHTML = '<tr><td colspan="4" class="muted">Yükleniyor…</td></tr>';
+  try {
+    const snap = await getDocs(query(collection(db, 'promoCodes', code, 'redemptions'), orderBy('at', 'desc'), limit(200)));
+    if (snap.empty) { body.innerHTML = '<tr><td colspan="4" class="muted">Henüz kimse kullanmadı.</td></tr>'; return; }
+    const players = await Promise.all(snap.docs.map((r) => getDoc(doc(db, 'players', r.id)).catch(() => null)));
+    body.innerHTML = '';
+    snap.docs.forEach((r, i) => {
+      const pl = players[i] && players[i].exists() ? players[i].data() : {};
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="muted">${snap.size - i}</td><td>${fmt(r.data().at)}</td><td class="code">${esc(pl.code || '—')}</td><td>${esc(pl.platform || '')}</td>`;
+      body.appendChild(tr);
+    });
+    $('redeemCard').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="4" class="bad">Liste alınamadı: ${esc(e.code || e.message)}</td></tr>`;
+  }
+}
+
+// ---------- gift to everyone ----------
+$('aSend').onclick = async () => {
+  const days = parseInt($('aWho').value);
+  const coins = Math.max(0, Math.min(1000000, parseInt($('aCoins').value) || 0));
+  const adFreeDays = Math.max(0, Math.min(3650, parseInt($('aDays').value) || 0));
+  const message = $('aMsg').value.trim().slice(0, 120);
+  if (!coins && !adFreeDays) return toast('Coin ya da reklamsız gün gir.', true);
+  $('aSend').disabled = true; $('aState').textContent = 'Oyuncular sayılıyor…';
+  try {
+    const base = collection(db, 'players');
+    const q = days ? query(base, where('lastSeen', '>=', Timestamp.fromMillis(Date.now() - days * 86400000))) : base;
+    const snap = await getDocs(q);
+    if (snap.empty) { toast('Bu gruba uyan oyuncu yok.', true); return; }
+    if (!confirm(`${snap.size} oyuncuya ${coins.toLocaleString('tr-TR')} coin + ${adFreeDays} gün reklamsız gönderilsin mi?`)) return;
+    let sent = 0;
+    for (let i = 0; i < snap.docs.length; i += 450) {
+      const b = writeBatch(db);
+      const part = snap.docs.slice(i, i + 450);
+      part.forEach((p) => b.set(doc(collection(p.ref, 'gifts')), { coins, adFreeDays, message, createdAt: serverTimestamp(), claimedAt: null }));
+      await b.commit();
+      sent += part.length;
+      $('aState').textContent = `${sent} / ${snap.size} gönderildi…`;
+    }
+    toast(`${sent} oyuncuya hediye gönderildi.`);
+    $('aCoins').value = 0; $('aDays').value = 0; $('aMsg').value = '';
+  } catch (e) {
+    toast('Gönderilemedi: ' + (e.code || e.message), true);
+  } finally {
+    $('aSend').disabled = false; $('aState').textContent = '';
+  }
+};
+
+// ---------- stats ----------
+$('sReload').onclick = () => loadStats();
+async function loadStats() {
+  const box = $('stats');
+  box.innerHTML = '<div class="muted">Yükleniyor…</div>';
+  try {
+    const players = collection(db, 'players');
+    const since = (d) => Timestamp.fromMillis(Date.now() - d * 86400000);
+    const count = async (q) => (await getCountFromServer(q)).data().count;
+    const [total, d1, d7, d30, ios, android, promos] = await Promise.all([
+      count(players),
+      count(query(players, where('lastSeen', '>=', since(1)))),
+      count(query(players, where('lastSeen', '>=', since(7)))),
+      count(query(players, where('lastSeen', '>=', since(30)))),
+      count(query(players, where('platform', '==', 'ios'))),
+      count(query(players, where('platform', '==', 'android'))),
+      getDocs(collection(db, 'promoCodes')),
+    ]);
+    let redeemed = 0, promoCoins = 0;
+    promos.forEach((p) => { const x = p.data(); redeemed += x.uses || 0; promoCoins += (x.uses || 0) * (x.coins || 0); });
+    const stat = (n, label) => `<div class="stat"><b>${n.toLocaleString('tr-TR')}</b><span>${label}</span></div>`;
+    box.innerHTML = stat(total, 'Toplam oyuncu') + stat(d1, 'Son 24 saatte açan') + stat(d7, 'Son 7 gün') + stat(d30, 'Son 30 gün') +
+      stat(ios, 'iPhone') + stat(android, 'Android') + stat(promos.size, 'Promosyon kodu') + stat(redeemed, 'Kod kullanımı') +
+      stat(promoCoins, 'Kodlarla dağıtılan coin (yaklaşık)');
+    const recent = await getDocs(query(players, orderBy('lastSeen', 'desc'), limit(500)));
+    const byVersion = {};
+    recent.forEach((p) => { const v = p.data().appVersion || '?'; byVersion[v] = (byVersion[v] || 0) + 1; });
+    $('versions').innerHTML = Object.entries(byVersion).sort((a, b) => b[1] - a[1])
+      .map(([v, n]) => `<span class="pill" style="margin:3px;display:inline-block">${esc(v)}: ${n}</span>`).join('') +
+      '<div style="font-size:12px;margin-top:6px">Son açan 500 oyuncuya göre.</div>';
+  } catch (e) {
+    box.innerHTML = `<div class="bad">İstatistik alınamadı: ${esc(e.code || e.message)}</div>`;
   }
 }
 </script>
